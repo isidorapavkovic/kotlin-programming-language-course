@@ -48,12 +48,13 @@ open class BankAccount(private val accountNumber: String,
     open fun withdraw(amount: Double): Boolean {
         if(balance < amount) {
             println("There are not enough funds in the account to make the requested withdrawal.\n")
+            return false
         }
         balance -= amount
         return true
     }
 
-    open fun getBalance(): Double = balance
+    fun getBalance(): Double = balance
 
     open fun displayAccountInfo() {
         println(
@@ -79,4 +80,6 @@ fun main() {
     account.getBalance()
 
     account.withdraw(550.0)
+
+    account.displayAccountInfo()
 }

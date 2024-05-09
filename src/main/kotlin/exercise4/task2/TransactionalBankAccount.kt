@@ -86,41 +86,40 @@ class TransactionalBankAccount(accountNumber: String,
     private val transactions = mutableListOf<Transaction>()
 
     override fun deposit(amount: Double): Boolean {
-        val success = super.deposit(amount)
-        recordTransaction(amount, success, TransactionType.DEPOSIT)
-        return success
+        return doTransaction(amount, TransactionType.DEPOSIT) == TransactionStatus.SUCCESS
     }
 
     override fun withdraw(amount: Double): Boolean {
-        val success = super.withdraw(amount)
-        recordTransaction(amount, success, TransactionType.WITHDRAWAL)
-        return success
+        return doTransaction(amount, TransactionType.WITHDRAWAL) == TransactionStatus.SUCCESS
     }
 
-    private fun recordTransaction(amount: Double, success: Boolean, transactionType: TransactionType) {
+    private fun doTransaction(amount: Double, transactionType: TransactionType) : TransactionStatus {
+        val initialBalance = getBalance()
+        val success = when (transactionType) {
+            TransactionType.DEPOSIT -> super.deposit(amount)
+            TransactionType.WITHDRAWAL -> super.withdraw(amount)
+        }
+        val finalBalance = getBalance()
+
+        val transactionStatus = if (success) {
+            TransactionStatus.SUCCESS
+        } else {
+            TransactionStatus.FAILURE
+        }
+
         val transaction = Transaction(
             LocalDateTime.now(),
             transactionType,
             amount,
-            if (transactionType == TransactionType.DEPOSIT) {
-                if (amount > 0)
-                    getBalance() + amount
-                else {
-                    getBalance()
-                }
-            } else {
-                getBalance() - amount
-            },
-            getBalance(),
-            if (success)
-                TransactionStatus.SUCCESS
-            else
-                TransactionStatus.FAILURE
+            initialBalance,
+            finalBalance,
+            transactionStatus
         )
-        transactions.add(transaction)
-    }
 
-    override fun getBalance(): Double = super.getBalance()
+        transactions.add(transaction)
+
+        return transactionStatus
+    }
 
     fun getAllTransactions(): List<Transaction> {
         return transactions.sortedByDescending { it.transactionDate }
@@ -131,42 +130,35 @@ class TransactionalBankAccount(accountNumber: String,
     }
 
     fun getTransactionsBetween(startDate: LocalDateTime, endDate: LocalDateTime): List<Transaction> {
-        return transactions.filter { it.transactionDate.isAfter(startDate) && it.transactionDate.isBefore(endDate) }
-            .sortedByDescending { it.transactionDate }
+        return getAllTransactionsBy { it.transactionDate.isAfter(startDate) && it.transactionDate.isBefore(endDate) }
     }
 
     fun getAllFailedTransactions(): List<Transaction> {
-        return transactions.filter { it.transactionStatus == TransactionStatus.FAILURE }
-            .sortedByDescending { it.transactionDate }
+        return getAllTransactionsBy { it.transactionStatus == TransactionStatus.FAILURE }
     }
 
     fun getAllSuccessTransactions(): List<Transaction> {
-        return transactions.filter { it.transactionStatus == TransactionStatus.SUCCESS }
-            .sortedByDescending { it.transactionDate }
+        return getAllTransactionsBy { it.transactionStatus == TransactionStatus.SUCCESS }
     }
 
     fun getAllFailedDeposits(): List<Transaction> {
-        return transactions.filter { it.transactionType == TransactionType.DEPOSIT &&
+        return getAllTransactionsBy { it.transactionType == TransactionType.DEPOSIT &&
                 it.transactionStatus == TransactionStatus.FAILURE }
-            .sortedByDescending { it.transactionDate }
     }
 
     fun getAllFailedWithdrawals(): List<Transaction> {
-        return transactions.filter { it.transactionType == TransactionType.WITHDRAWAL &&
+        return getAllTransactionsBy { it.transactionType == TransactionType.WITHDRAWAL &&
                 it.transactionStatus == TransactionStatus.FAILURE }
-            .sortedByDescending { it.transactionDate }
     }
 
     fun getAllSuccessfulDeposits(): List<Transaction> {
-        return transactions.filter { it.transactionType == TransactionType.DEPOSIT &&
+        return getAllTransactionsBy { it.transactionType == TransactionType.DEPOSIT &&
                 it.transactionStatus == TransactionStatus.SUCCESS }
-            .sortedByDescending { it.transactionDate }
     }
 
     fun getAllSuccessfulWithdrawals(): List<Transaction> {
-        return transactions.filter { it.transactionType == TransactionType.WITHDRAWAL &&
+        return getAllTransactionsBy { it.transactionType == TransactionType.WITHDRAWAL &&
                 it.transactionStatus == TransactionStatus.SUCCESS }
-            .sortedByDescending { it.transactionDate }
     }
 
     override fun displayAccountInfo() {
@@ -229,6 +221,10 @@ fun main() {
     account.displayAccountInfo()
 
     account.deposit(-10.0)
+
+    account.displayAccountInfo()
+
+    account.withdraw(700.0)
 
     account.displayAccountInfo()
 

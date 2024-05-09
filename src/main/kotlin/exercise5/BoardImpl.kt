@@ -6,17 +6,24 @@ fun <T> createGameBoard(width: Int): GameBoard = GameBoardImpl(width)
 
 open class SquareBoardImpl(size: Int) : SquareBoard {
     override val width: Int = size
-    private val cells: List<Cell>
+    private val cells: List<List<Cell>>
 
     init {
         require(size >= 0) {
             "Invalid size. Please make sure that the size is greater than 0."
         }
-        cells = (1..size).flatMap { i -> (1..size).map { j -> Cell(i, j) } }
+        cells = List(size) { x ->
+            List(size) { y ->
+                Cell(x+1, y+1)
+            }
+        }
     }
 
     override fun getCellOrNull(i: Int, j: Int): Cell? {
-        return cells.find { it.i == i && it.j == j }
+        if (i !in 1..width || j !in 1..width) {
+            return null
+        }
+        return cells[i - 1][j - 1]
     }
 
     override fun getCell(i: Int, j: Int): Cell {
@@ -24,15 +31,15 @@ open class SquareBoardImpl(size: Int) : SquareBoard {
     }
 
     override fun getAllCells(): Collection<Cell> {
-        return cells
+        return cells.flatten()
     }
 
     override fun getRow(i: Int, jRange: IntProgression): List<Cell> {
-        return jRange.filter { it in 1..width }.map { getCell(i, it) }
+        return jRange.mapNotNull { getCellOrNull(i, it) }
     }
 
     override fun getColumn(iRange: IntProgression, j: Int): List<Cell> {
-        return iRange.filter { it in 1..width }.map { getCell(it, j) }
+        return iRange.mapNotNull { getCellOrNull(it, j) }
     }
 
     override fun Cell.getNeighbour(direction: Direction): Cell? {
@@ -46,7 +53,7 @@ open class SquareBoardImpl(size: Int) : SquareBoard {
 }
 
 class GameBoardImpl(size: Int) : SquareBoardImpl(size), GameBoard {
-    private val cellValues: MutableMap<Cell, String?> = mutableMapOf()
+    private val cellValues = mutableMapOf<Cell, String?>()
 
     override fun get(cell: Cell): String? {
         return cellValues[cell]
